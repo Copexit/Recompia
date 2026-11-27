@@ -6,9 +6,13 @@
 #if defined(__ANDROID__)
 #include <atomic>
 #include <jni.h>
+
+#include "extras/hdr_math.h"
+#include "nxrt/screenshot.h"
 #endif
 #include <cmath>
 #include <cstring>
+#include <iterator>
 
 #include "extras/vk_make.h"
 #include "nxrt/log.h"
@@ -20,6 +24,8 @@ namespace {
 constexpr const char* kTag = "outpass";
 #if defined(__ANDROID__)
 std::atomic<bool> g_hdr_paper_white_only{false};
+constexpr int kCalibrationNits[] = {203, 300, 450, 600, 1000};
+std::atomic<int> g_hdr_calibration_step{-1};
 #endif
 
 #include "extras/extras_shaders.inc"
@@ -247,6 +253,27 @@ void OutputPass::encode(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_f
     ri.layerCount = 1;
     ri.colorAttachmentCount = 1;
     ri.pColorAttachments = &att;
+#if defined(__ANDROID__)
+    const int step = g_hdr_calibration_step.load(std::memory_order_relaxed);
+    if (mode >= 2 && step >= 0) {
+        const auto encode_nits = [mode](float nits) { return mode == 2 ? pq_oetf(nits) : nits / 80.0f; };
+        const float background = encode_nits(20.0f);
+        att.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        att.clearValue.color = {{background, background, background, 1.0f}};
+        const float level = encode_nits(static_cast<float>(kCalibrationNits[step]));
+        VkClearAttachment patch{};
+        patch.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        patch.clearValue.color = {{level, level, level, 1.0f}};
+        const uint32_t w = std::max(1u, dst_extent.width * 24 / 100);
+        const uint32_t h = std::max(1u, dst_extent.height * 40 / 100);
+        const VkClearRect rect{{{static_cast<int32_t>((dst_extent.width - w) / 2),
+                                 static_cast<int32_t>((dst_extent.height - h) / 2)}, {w, h}}, 0, 1};
+        vkCmdBeginRendering(cb, &ri);
+        vkCmdClearAttachments(cb, 1, &patch, 1, &rect);
+        vkCmdEndRendering(cb);
+        return;
+    }
+#endif
     vkCmdBeginRendering(cb, &ri);
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipe);
     vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, enc_layout_, 0, 1, &set, 0, nullptr);
@@ -260,12 +287,31 @@ void OutputPass::encode(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_f
 }
 
 #if defined(__ANDROID__)
-extern "C" JNIEXPORT jint JNICALL Java_org_recompia_pkp_overlay_TouchOverlay_hdrComparison(JNIEnv*, jobject, jboolean toggle) {
+extern "C" JNIEXPORT jint JNICALL Java_org_recompia_pkp_overlay_TouchOverlay_hdrComparison(
+    JNIEnv* env, jobject, jint action, jstring capture_path) {
     const HdrState hdr = hdr_state();
     if (!hdr.scene_hdr || hdr.output == OutputKind::Sdr8) return 0;
+    if (capture_path) {
+        const char* path = env->GetStringUTFChars(capture_path, nullptr);
+        if (!path) return 0;
+        const bool requested = screenshot::request(path, true);
+        env->ReleaseStringUTFChars(capture_path, path);
+        return requested ? 1 : 0;
+    }
+    int step = g_hdr_calibration_step.load(std::memory_order_relaxed);
+    if (action == 2) {
+        step = step < 0 ? 0 : -1;
+        g_hdr_calibration_step.store(step, std::memory_order_relaxed);
+    } else if (action == 1 && step >= 0) {
+        step = (step + 1) % static_cast<int>(std::size(kCalibrationNits));
+        g_hdr_calibration_step.store(step, std::memory_order_relaxed);
+    }
+    if (step >= 0) {
+        if (action != 0) NXLOG_I(kTag, "HDR calibration: %d nits", kCalibrationNits[step]);
+        return kCalibrationNits[step];
+    }
     bool limited = g_hdr_paper_white_only.load(std::memory_order_relaxed);
-    // The Android UI thread is the sole writer.
-    if (toggle) {
+    if (action == 1) {
         limited = !limited;
         g_hdr_paper_white_only.store(limited, std::memory_order_relaxed);
         NXLOG_I(kTag, "HDR comparison: %s", limited ? "paper white only" : "HDR highlights");

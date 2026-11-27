@@ -38,13 +38,15 @@ object TouchOverlay {
     private const val TAG = "Recompia"
 
     @Keep
-    private external fun hdrComparison(toggle: Boolean): Int
+    private external fun hdrComparison(action: Int, capturePath: String? = null): Int
 
     private fun toggleHdrComparison(): Boolean {
-        val label = when (hdrComparison(true)) {
-            1 -> R.string.overlay_hdr_highlights
-            2 -> R.string.overlay_hdr_paper_white
-            else -> return false
+        val state = hdrComparison(1)
+        val label = when (state) {
+            0 -> return false
+            1 -> activity.getString(R.string.overlay_hdr_highlights)
+            2 -> activity.getString(R.string.overlay_hdr_paper_white)
+            else -> activity.getString(R.string.overlay_hdr_nits, state)
         }
         Toast.makeText(activity, label, Toast.LENGTH_SHORT).show()
         return true
@@ -158,12 +160,20 @@ object TouchOverlay {
     private fun showMenu() {
         val p = OverlayPrefs.of(activity)
         val enabled = OverlayPrefs.enabled(p)
-        val hdr = hdrComparison(false)
+        val hdr = hdrComparison(0)
         val items = buildList {
             add(activity.getString(if (enabled) R.string.overlay_menu_hide else R.string.overlay_menu_show))
             add(activity.getString(R.string.overlay_menu_edit))
             add(activity.getString(R.string.overlay_menu_exit))
-            if (hdr != 0) add(activity.getString(if (hdr == 1) R.string.overlay_hdr_limit else R.string.overlay_hdr_restore))
+            if (hdr != 0) {
+                add(activity.getString(when (hdr) {
+                    1 -> R.string.overlay_hdr_limit
+                    2 -> R.string.overlay_hdr_restore
+                    else -> R.string.overlay_hdr_next_step
+                }))
+                add(activity.getString(if (hdr > 2) R.string.overlay_hdr_end_calibration else R.string.overlay_hdr_start_calibration))
+                add(activity.getString(R.string.overlay_hdr_capture))
+            }
             add(activity.getString(R.string.overlay_menu_close))
         }.toTypedArray()
         overlay.releaseAll()
@@ -178,6 +188,15 @@ object TouchOverlay {
                     1 -> setEditing(true)
                     2 -> exitToApp()
                     3 -> if (hdr != 0) toggleHdrComparison()
+                    4 -> {
+                        val level = hdrComparison(2)
+                        if (level > 2) Toast.makeText(activity, activity.getString(R.string.overlay_hdr_nits, level), Toast.LENGTH_SHORT).show()
+                    }
+                    5 -> {
+                        val path = java.io.File(activity.cacheDir, "hdr-${System.currentTimeMillis()}.png").absolutePath
+                        val saved = hdrComparison(0, path) != 0
+                        Toast.makeText(activity, if (saved) R.string.overlay_hdr_capture_requested else R.string.overlay_hdr_capture_failed, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
             .show()

@@ -16,4 +16,11 @@
     <string name="overlay_hdr_restore">Compare HDR: Restore highlights</string>
     <string name="overlay_hdr_highlights">HDR comparison: Highlights on</string>
     <string name="overlay_hdr_paper_white">HDR comparison: Paper white only</string>
+    <string name="overlay_hdr_nits">HDR calibration: %1$d nits</string>
+    <string name="overlay_hdr_next_step">Next HDR calibration level</string>
+    <string name="overlay_hdr_start_calibration">Start HDR calibration (203 nits)</string>
+    <string name="overlay_hdr_end_calibration">Return to game picture</string>
+    <string name="overlay_hdr_capture">Capture HDR signal</string>
+    <string name="overlay_hdr_capture_requested">HDR capture requested</string>
+    <string name="overlay_hdr_capture_failed">HDR capture unavailable</string>
 </resources>
