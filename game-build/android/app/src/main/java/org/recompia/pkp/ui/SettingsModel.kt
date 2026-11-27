@@ -119,7 +119,8 @@ object SettingsModel {
             val autoPeak = ctx.getString(
                 if (reportedPeak != null) R.string.ui_set_hdr_auto_peak else R.string.ui_set_hdr_fallback_peak, peak
             )
-            val peaks = ((200..peak step 50).toList() + peak).distinct()
+            val manualLimit = (peak * 3).coerceIn(3000, 10000)
+            val peaks = ((200..manualLimit step 50).toList() + manualLimit).distinct()
             listOf(Group(R.string.ui_set_hdr, listOf(
                 Choice("hdr_mode", c, "hdr", "mode", R.string.ui_set_hdr_mode, "off", listOf(
                     Option("off", R.string.ui_off), Option("auto", R.string.ui_set_automatic),

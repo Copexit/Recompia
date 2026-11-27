@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Android supports opt-in HDR on compatible displays and caps peak brightness to the display’s reported limit. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game. HDR uses bicubic in place of SGSR to preserve highlights.
+- Android supports opt-in HDR on compatible displays and uses the reported display peak in Auto and allows higher manual HDR targets. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game. HDR uses bicubic in place of SGSR to preserve highlights.
 
 ## 0.18.0 (build V: Vaquita)
 

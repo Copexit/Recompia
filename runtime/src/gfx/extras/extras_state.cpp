@@ -289,7 +289,7 @@ int hdr_reported_peak_nits() {
 int hdr_peak_limit_nits() {
 #if defined(__ANDROID__)
     const int reported = hdr_reported_peak_nits();
-    return reported > 0 ? reported : 1000;
+    return std::clamp(reported * 3, 3000, 10000);
 #else
     return 10000;
 #endif

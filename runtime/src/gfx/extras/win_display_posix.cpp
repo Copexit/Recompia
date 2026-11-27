@@ -90,7 +90,8 @@ bool query_display_hdr(void* hwnd, DisplayHdrInfo* out) {
             const float nits = strtof(value, &end);
             return end != value && *end == '\0' && isfinite(nits) && nits > 0.0f ? nits : 0.0f;
         };
-        out->max_nits = static_cast<float>(hdr_peak_limit_nits());
+        const int reported = hdr_reported_peak_nits();
+        out->max_nits = reported > 0 ? static_cast<float>(reported) : 1000.0f;
         out->min_nits = read_nits("NXRT_ANDROID_DISPLAY_MIN_NITS");
         out->sdr_white_nits = kReferenceWhiteNits;
     }
