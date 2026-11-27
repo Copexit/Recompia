@@ -204,7 +204,7 @@ VkImageView SgsrSpatial::upscale(VkCommandBuffer cb, VkImageView src, VkExtent2D
 std::atomic<int> g_row_up{-1};
 void set_scene_upscale_live(int kind) { g_row_up.store(kind, std::memory_order_relaxed); }
 
-const char* scene_upscale_name() {
+static const char* requested_scene_upscale_name() {
     if (const int w = scene_upscale_watch(); w >= 0) return w == 1 ? "sgsr" : w == 2 ? "bicubic" : "";   // developer key, live
     if (const int r = g_row_up.load(std::memory_order_relaxed); r >= 0) return r == 1 ? "sgsr" : r == 2 ? "bicubic" : "";
     static const std::string v = [] {
@@ -215,11 +215,18 @@ const char* scene_upscale_name() {
     return v.c_str();
 }
 
+const char* scene_upscale_name() {
+    const char* name = requested_scene_upscale_name();
+    // SGSR clips edge-filtered samples to [0, 1]. Bicubic preserves HDR highlights above paper white.
+    return hdr_scene_active() && std::strcmp(name, "sgsr") == 0 ? "bicubic" : name;
+}
+
 SgsrSpatial* scene_cheap_upscaler(void* gfx_device) {
     static SgsrSpatial* up[2] = {};   // one per kind, made on first use (a live switch back costs nothing)
     static bool tried[2] = {};
-    if (!gfx_device || !*scene_upscale_name()) return nullptr;
-    const int k = std::string(scene_upscale_name()) == "sgsr" ? 0 : 1;
+    const char* name = scene_upscale_name();
+    if (!gfx_device || !*name) return nullptr;
+    const int k = std::strcmp(name, "sgsr") == 0 ? 0 : 1;
     if (!tried[k]) {
         tried[k] = true;
         auto* u = new SgsrSpatial(k == 0 ? SgsrSpatial::Kind::Sgsr : SgsrSpatial::Kind::Bicubic);
