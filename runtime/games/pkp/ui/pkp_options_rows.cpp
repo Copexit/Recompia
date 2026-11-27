@@ -265,7 +265,7 @@ const Row kPerformance[] = {
     when(number("Sharpness", "How much FSR 1, FSR 3 or SGSR 2 sharpens the picture.", 0, 20, "%.2f", 0, 0.05, ROW_STEP(extras.upscale.sharpness, 0.0, 0.05)), not_phone),
     // a phone's Upscaler and its Sharpness sit here too, at the same place as the desktop's (the Display tab keeps Resolution)
     when(with_choices(choice("Upscaler", "Sharpens the enlarged 3D picture. SGSR is recommended: cheaper and steadier. SGSR 2 builds more detail over several "
-                "frames, but costs more and can shimmer slightly while moving.", {"Off", "SGSR", "SGSR 2"}, 3, phone_upscaler_get, phone_upscaler_set),
+                "frames. When HDR is active, selecting SGSR uses bicubic scaling to preserve highlights.", {"Off", "SGSR", "SGSR 2"}, 3, phone_upscaler_get, phone_upscaler_set),
                      phone_upscaler_choices), nxrt::host_is_phone),
     when(live_row(number("Sharpness", "How much SGSR 2 sharpens its picture; SGSR does not use it. Higher is crisper, and fine detail can shimmer more.", 0,
                          20, "%.2f", 0, 0.05, ROW_STEP(extras.upscale.sharpness, 0.0, 0.05))), nxrt::host_is_phone),
@@ -316,12 +316,12 @@ const Row kGraphics[] = {
 const Row kPicture[] = {
     when(choice("HDR", "High dynamic range output on a display that supports it.", {"Off", "Auto", "On", "Native"}, 4, ROW_ENUM(extras.hdr.mode, extras::HdrMode), true), extras::hdr_controls_available),
     when(choice("HDR Format", "The HDR signal sent to the display.", {"Auto", "HDR10", "scRGB"}, 3, ROW_ENUM(extras.hdr.format, extras::HdrFormat), true), extras::hdr_controls_available),
-    when(live_row(dynamic("Peak Brightness", "Auto uses the reported display peak. Manual can request a higher HDR signal. Restart to rebuild the highlight curve.",
+    when(live_row(dynamic("Peak Brightness", "On Android, Auto targets twice the reported display peak. Manual can request a higher HDR signal. Restart to rebuild the highlight curve.",
             [](int pos, char* out, size_t n) -> const char* {
                 if (pos == 0) {
 #if defined(__ANDROID__)
                     const int reported = extras::hdr_reported_peak_nits();
-                    std::snprintf(out, n, reported > 0 ? "Auto (%d nits)" : "Auto (%d nits fallback)", reported > 0 ? reported : 1000);
+                    std::snprintf(out, n, reported > 0 ? "Auto (%d nits)" : "Auto (%d nits fallback)", extras::hdr_auto_peak_nits());
                     return out;
 #else
                     return "Auto";

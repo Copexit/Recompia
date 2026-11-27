@@ -25,11 +25,7 @@ enum class HdrMode : uint8_t { Off = 0, Auto, On, Native };
 enum class HdrFormat : uint8_t { Auto = 0, Hdr10, ScRgb };     // swapchain flavour (Auto: HDR10 when offered, else scRGB)
 
 struct HdrSettings {
-#if defined(__ANDROID__)
-    HdrMode mode = HdrMode::Off;
-#else
     HdrMode mode = HdrMode::Auto;
-#endif
     HdrFormat format = HdrFormat::Auto;
     double peak_nits = 0;            // 0 = the display's reported peak (1000 when it reports none), else 200..10000
     double paper_white_nits = 0;     // 0 = Windows' SDR content brightness when HDR is on there (203 otherwise), else 80..500
@@ -184,6 +180,7 @@ void hdr_refresh_levels();
 void hdr_preview_levels(const HdrSettings& settings);
 bool hdr_controls_available();
 int hdr_reported_peak_nits();
+int hdr_auto_peak_nits();
 int hdr_peak_limit_nits();
 
 // The game's declarations (HdrMode::Native). Thread-safe; each call refreshes the levels and the swapchain metadata, and logs the native decision once.

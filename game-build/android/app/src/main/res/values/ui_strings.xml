@@ -224,7 +224,7 @@
     <string name="ui_set_fps_detail_2">Full: also heat and load</string>
     <string name="ui_set_upscale">Upscaler</string>
     <string name="ui_set_upscale_off">Off</string>
-    <string name="ui_set_upscale_note">SGSR sharpens the enlarged 3D picture; menus and text stay sharp.</string>
+    <string name="ui_set_upscale_note">SGSR sharpens the enlarged 3D picture. During HDR, the SGSR setting uses bicubic scaling to preserve highlights.</string>
     <string name="ui_set_game">Game</string>
     <string name="ui_set_language">Language</string>
     <string name="ui_set_automatic">Automatic</string>

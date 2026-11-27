@@ -7,7 +7,6 @@ import org.json.JSONObject
 import org.recompia.pkp.Paths
 import org.recompia.pkp.R
 import org.recompia.pkp.hdrDisplayCapabilities
-import org.recompia.pkp.migrateAndroidHdrDefault
 import org.recompia.pkp.reportedHdrPeak
 
 /**
@@ -80,7 +79,6 @@ object SettingsModel {
     }
 
     fun groups(ctx: Context): List<Group> {
-        runCatching { migrateAndroidHdrDefault(ctx) }
         val controls = Schema(AppViewModel.readText(ctx, "controls_schema.json"))
         val pkp = Schema(AppViewModel.readText(ctx, "pkp_ini_schema.json"))
         val c = File.CONTROLS
@@ -117,12 +115,12 @@ object SettingsModel {
             val reportedPeak = reportedHdrPeak(caps)
             val peak = reportedPeak ?: 1000
             val autoPeak = ctx.getString(
-                if (reportedPeak != null) R.string.ui_set_hdr_auto_peak else R.string.ui_set_hdr_fallback_peak, peak
+                if (reportedPeak != null) R.string.ui_set_hdr_auto_peak else R.string.ui_set_hdr_fallback_peak, (peak * 2).coerceAtMost(10000)
             )
-            val manualLimit = (peak * 3).coerceIn(3000, 10000)
+            val manualLimit = (peak * 6).coerceAtMost(10000)
             val peaks = ((200..manualLimit step 50).toList() + manualLimit).distinct()
             listOf(Group(R.string.ui_set_hdr, listOf(
-                Choice("hdr_mode", c, "hdr", "mode", R.string.ui_set_hdr_mode, "off", listOf(
+                Choice("hdr_mode", c, "hdr", "mode", R.string.ui_set_hdr_mode, "auto", listOf(
                     Option("off", R.string.ui_off), Option("auto", R.string.ui_set_automatic),
                     Option("on", R.string.ui_set_hdr_on), Option("native", R.string.ui_set_hdr_native))),
                 Choice("hdr_format", c, "hdr", "format", R.string.ui_set_hdr_format, controls.def("hdr", "format"), listOf(

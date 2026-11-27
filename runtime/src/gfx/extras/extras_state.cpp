@@ -63,7 +63,7 @@ const char* output_kind_name(OutputKind k) {
 
 Settings settings_from_config() {
     Settings s;
-    const std::string hm = lower(config_get_str("hdr", "mode", s.hdr.mode == HdrMode::Off ? "off" : "auto"));
+    const std::string hm = lower(config_get_str("hdr", "mode", "auto"));
     s.hdr.mode = hm == "off" || hm == "0" || hm == "false" ? HdrMode::Off : hm == "on" || hm == "1" || hm == "true" ? HdrMode::On : hm == "native" ? HdrMode::Native : HdrMode::Auto;
     const std::string hf = lower(config_get_str("hdr", "format", "auto"));
     s.hdr.format = hf == "hdr10" ? HdrFormat::Hdr10 : hf == "scrgb" ? HdrFormat::ScRgb : HdrFormat::Auto;
@@ -286,10 +286,15 @@ int hdr_reported_peak_nits() {
 #endif
 }
 
+int hdr_auto_peak_nits() {
+    const int reported = hdr_reported_peak_nits();
+    return std::min((reported > 0 ? reported : 1000) * 2, 10000);
+}
+
 int hdr_peak_limit_nits() {
 #if defined(__ANDROID__)
     const int reported = hdr_reported_peak_nits();
-    return std::clamp(reported * 3, 3000, 10000);
+    return std::min((reported > 0 ? reported : 1000) * 6, 10000);
 #else
     return 10000;
 #endif
@@ -378,6 +383,7 @@ void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_pe
     if (pk <= 0) pk = display_peak_nits >= 200.0f ? std::min(display_peak_nits, 10000.0f) : 1000.0f;
 #if defined(__ANDROID__)
     if (display_hdr) {
+        if (s.peak_nits <= 0) pk = static_cast<float>(hdr_auto_peak_nits());
         pk = std::min(pk, static_cast<float>(hdr_peak_limit_nits()));
         pw = std::min(pw, pk);
     }
