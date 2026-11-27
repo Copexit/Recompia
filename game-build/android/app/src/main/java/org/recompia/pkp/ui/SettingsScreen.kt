@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -41,8 +42,9 @@ fun writeSetting(row: SettingsModel.Row, value: String) = writer.execute { runCa
 @Composable
 fun SettingsScreen(onBack: () -> Unit, onUpdate: () -> Unit) {
     val ctx = LocalContext.current
-    val groups = remember { SettingsModel.groups(ctx) }
-    var values by remember { mutableStateOf(runCatching { SettingsModel.read(groups) }.getOrDefault(emptyMap())) }
+    val configuration = LocalConfiguration.current
+    val groups = remember(ctx, configuration) { SettingsModel.groups(ctx) }
+    var values by remember(groups) { mutableStateOf(runCatching { SettingsModel.read(groups) }.getOrDefault(emptyMap())) }
     val set = { row: SettingsModel.Row, v: String -> writeSetting(row, v); values = values + (row.id to v) }
     val readable = values.isNotEmpty()
     Page(

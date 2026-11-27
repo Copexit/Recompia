@@ -25,7 +25,11 @@ enum class HdrMode : uint8_t { Off = 0, Auto, On, Native };
 enum class HdrFormat : uint8_t { Auto = 0, Hdr10, ScRgb };     // swapchain flavour (Auto: HDR10 when offered, else scRGB)
 
 struct HdrSettings {
+#if defined(__ANDROID__)
+    HdrMode mode = HdrMode::Off;
+#else
     HdrMode mode = HdrMode::Auto;
+#endif
     HdrFormat format = HdrFormat::Auto;
     double peak_nits = 0;            // 0 = the display's reported peak (1000 when it reports none), else 200..10000
     double paper_white_nits = 0;     // 0 = Windows' SDR content brightness when HDR is on there (203 otherwise), else 80..500
@@ -179,6 +183,8 @@ inline bool hdr_scene_active() { return hdr_state().scene_hdr; }
 void hdr_refresh_levels();
 void hdr_preview_levels(const HdrSettings& settings);
 bool hdr_controls_available();
+int hdr_reported_peak_nits();
+int hdr_peak_limit_nits();
 
 // The game's declarations (HdrMode::Native). Thread-safe; each call refreshes the levels and the swapchain metadata, and logs the native decision once.
 void hdr_note_layer_luminance(bool extended, unsigned min_nits, unsigned max_nits);
@@ -187,6 +193,6 @@ void hdr_note_window_hdr(int color_space, const float* display, const float* con
 bool hdr_mode_native();
 
 // Resolves the numbers the settings leave at 0 ("auto") against what the display reports.
-void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_peak_nits, float display_sdr_white_nits, float* paper, float* peak);
+void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_peak_nits, float display_sdr_white_nits, float* paper, float* peak, float native_standard_nits = 0);
 
 }  // namespace nxrt::extras

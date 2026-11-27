@@ -460,11 +460,9 @@ struct Renderer::Impl {
             hs.display_hdr = di.hdr_enabled;
             hs.display_peak_nits = di.valid ? di.max_nits : 0.0f;
             hs.display_sdr_white_nits = di.valid ? di.sdr_white_nits : 80.0f;
-            extras::hdr_resolve_levels(es.hdr, di.valid && di.hdr_enabled, di.valid ? di.max_nits : 0.0f, di.sdr_white_nits, &hs.paper_white_nits, &hs.peak_nits);
-            if (hs.mode == extras::HdrMode::Native && es.hdr.paper_white_nits <= 0 && hs.game_standard_nits >= 80.0f) {
-                hs.paper_white_nits = std::clamp(hs.game_standard_nits, 80.0f, 500.0f);
-                hs.peak_nits = std::max(hs.peak_nits, hs.paper_white_nits);
-            }
+            extras::hdr_resolve_levels(es.hdr, hs.display_hdr, hs.display_peak_nits, hs.display_sdr_white_nits,
+                                       &hs.paper_white_nits, &hs.peak_nits,
+                                       hs.mode == extras::HdrMode::Native ? hs.game_standard_nits : 0.0f);
             hs.peak_ratio = wanted == extras::OutputKind::Sdr8 ? 1.0f : extras::peak_ratio(hs.peak_nits, hs.paper_white_nits, static_cast<float>(es.hdr.highlight_boost));
         }
         hs.output = extras::OutputKind::Sdr8;     // the swapchain sets the real one

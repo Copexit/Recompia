@@ -36,7 +36,7 @@ class GameActivity : SDLActivity() {
         // Pass the activity display's capabilities before SDL starts the renderer.
         hdrDisplayCapabilities(display)?.let { hdr ->
             env["NXRT_ANDROID_DISPLAY_HDR"] = "1"
-            env["NXRT_ANDROID_DISPLAY_MAX_NITS"] = hdr.desiredMaxLuminance.toString()
+            reportedHdrPeak(hdr)?.let { env["NXRT_ANDROID_DISPLAY_MAX_NITS"] = it.toString() }
             env["NXRT_ANDROID_DISPLAY_MIN_NITS"] = hdr.desiredMinLuminance.toString()
         }
         // the file-backed heap ([memory] section_dir) must never fill the storage: below the free space it needs, this start uses the

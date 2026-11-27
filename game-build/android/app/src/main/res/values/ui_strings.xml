@@ -517,6 +517,8 @@
     <string name="ui_set_hdr_on">On</string>
     <string name="ui_set_hdr_native">Native</string>
     <string name="ui_set_hdr_format">HDR format</string>
+    <string name="ui_set_hdr_auto_peak">Auto (%1$d nits)</string>
+    <string name="ui_set_hdr_fallback_peak">Auto (%1$d nits fallback)</string>
     <string name="ui_set_hdr_peak">Peak brightness</string>
     <string name="ui_set_hdr_white">Paper white</string>
     <string name="ui_set_hdr_boost">Highlight boost</string>

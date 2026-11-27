@@ -7,6 +7,8 @@ import org.json.JSONObject
 import org.recompia.pkp.Paths
 import org.recompia.pkp.R
 import org.recompia.pkp.hdrDisplayCapabilities
+import org.recompia.pkp.migrateAndroidHdrDefault
+import org.recompia.pkp.reportedHdrPeak
 
 /**
  * The short, phone-safe set of settings, grouped and labelled as in the PC launcher (launcher/src/settings-schema.js). Keys and
@@ -78,6 +80,7 @@ object SettingsModel {
     }
 
     fun groups(ctx: Context): List<Group> {
+        runCatching { migrateAndroidHdrDefault(ctx) }
         val controls = Schema(AppViewModel.readText(ctx, "controls_schema.json"))
         val pkp = Schema(AppViewModel.readText(ctx, "pkp_ini_schema.json"))
         val c = File.CONTROLS
@@ -110,19 +113,27 @@ object SettingsModel {
                 Option("0", R.string.ui_set_upscale_off), Option("1", text = "SGSR")) + if (lowMemoryProfile()) emptyList() else listOf(Option("2", text = "SGSR 2")),
                 note = R.string.ui_set_upscale_note),
         ), note = R.string.ui_set_display_note)
-        val hdr = if (hdrDisplayCapabilities(ctx.display) != null) listOf(Group(R.string.ui_set_hdr, listOf(
-            Choice("hdr_mode", c, "hdr", "mode", R.string.ui_set_hdr_mode, controls.def("hdr", "mode"), listOf(
-                Option("off", R.string.ui_off), Option("auto", R.string.ui_set_automatic),
-                Option("on", R.string.ui_set_hdr_on), Option("native", R.string.ui_set_hdr_native))),
-            Choice("hdr_format", c, "hdr", "format", R.string.ui_set_hdr_format, controls.def("hdr", "format"), listOf(
-                Option("auto", R.string.ui_set_automatic), Option("hdr10", text = "HDR10"), Option("scrgb", text = "scRGB"))),
-            Choice("hdr_peak", c, "hdr", "peak_nits", R.string.ui_set_hdr_peak, controls.def("hdr", "peak_nits"),
-                listOf(Option("0", R.string.ui_set_automatic)) + (200..10000 step 50).map { Option("$it", text = "$it nits") }, slider = true),
-            Choice("hdr_white", c, "hdr", "paper_white_nits", R.string.ui_set_hdr_white, controls.def("hdr", "paper_white_nits"),
-                listOf(Option("0", R.string.ui_set_automatic)) + (80..500 step 10).map { Option("$it", text = "$it nits") }, slider = true),
-            Choice("hdr_boost", c, "hdr", "highlight_boost", R.string.ui_set_hdr_boost, controls.def("hdr", "highlight_boost"),
-                (0..200 step 5).map { val n = it.toBigDecimal().movePointLeft(2); Option(n.stripTrailingZeros().toPlainString(), text = n.toPlainString()) }, slider = true),
-        ), note = R.string.ui_set_hdr_note)) else emptyList()
+        val hdr = hdrDisplayCapabilities(ctx.display)?.let { caps ->
+            val reportedPeak = reportedHdrPeak(caps)
+            val peak = reportedPeak ?: 1000
+            val autoPeak = ctx.getString(
+                if (reportedPeak != null) R.string.ui_set_hdr_auto_peak else R.string.ui_set_hdr_fallback_peak, peak
+            )
+            val peaks = ((200..peak step 50).toList() + peak).distinct()
+            listOf(Group(R.string.ui_set_hdr, listOf(
+                Choice("hdr_mode", c, "hdr", "mode", R.string.ui_set_hdr_mode, "off", listOf(
+                    Option("off", R.string.ui_off), Option("auto", R.string.ui_set_automatic),
+                    Option("on", R.string.ui_set_hdr_on), Option("native", R.string.ui_set_hdr_native))),
+                Choice("hdr_format", c, "hdr", "format", R.string.ui_set_hdr_format, controls.def("hdr", "format"), listOf(
+                    Option("auto", R.string.ui_set_automatic), Option("hdr10", text = "HDR10"), Option("scrgb", text = "scRGB"))),
+                Choice("hdr_peak", c, "hdr", "peak_nits", R.string.ui_set_hdr_peak, controls.def("hdr", "peak_nits"),
+                    listOf(Option("0", text = autoPeak)) + peaks.map { Option("$it", text = "$it nits") }, slider = true),
+                Choice("hdr_white", c, "hdr", "paper_white_nits", R.string.ui_set_hdr_white, controls.def("hdr", "paper_white_nits"),
+                    listOf(Option("0", R.string.ui_set_automatic)) + (80..500 step 10).map { Option("$it", text = "$it nits") }, slider = true),
+                Choice("hdr_boost", c, "hdr", "highlight_boost", R.string.ui_set_hdr_boost, controls.def("hdr", "highlight_boost"),
+                    (0..200 step 5).map { val n = it.toBigDecimal().movePointLeft(2); Option(n.stripTrailingZeros().toPlainString(), text = n.toPlainString()) }, slider = true),
+            ), note = R.string.ui_set_hdr_note))
+        }.orEmpty()
         val game = Group(R.string.ui_set_game, listOf(
             Choice("language", c, "tweaks", "language", R.string.ui_set_language, controls.def("tweaks", "language"),
                 listOf(Option("auto", R.string.ui_set_automatic)) + LANGUAGES.map { Option(it.first, text = it.second) }),
