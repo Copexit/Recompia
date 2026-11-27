@@ -22,6 +22,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.Toast
+import androidx.annotation.Keep
 import java.lang.reflect.Proxy
 import org.libsdl.app.SDLActivity
 import org.recompia.pkp.R
@@ -36,6 +37,19 @@ import org.recompia.pkp.R
 object TouchOverlay {
     private const val TAG = "Recompia"
 
+    @Keep
+    private external fun hdrComparison(toggle: Boolean): Int
+
+    private fun toggleHdrComparison(): Boolean {
+        val label = when (hdrComparison(true)) {
+            1 -> R.string.overlay_hdr_highlights
+            2 -> R.string.overlay_hdr_paper_white
+            else -> return false
+        }
+        Toast.makeText(activity, label, Toast.LENGTH_SHORT).show()
+        return true
+    }
+
     private lateinit var activity: SDLActivity
     private lateinit var overlay: InputOverlay
     private lateinit var editBar: LinearLayout
@@ -49,6 +63,7 @@ object TouchOverlay {
         val container = SDLActivity.getContentView() as ViewGroup
         overlay = InputOverlay(activity, SdlVirtualGamepad).apply {
             onMenu = ::showMenu
+            onMenuHold = ::toggleHdrComparison
         }
         container.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         editBar = buildEditBar()
@@ -143,12 +158,14 @@ object TouchOverlay {
     private fun showMenu() {
         val p = OverlayPrefs.of(activity)
         val enabled = OverlayPrefs.enabled(p)
-        val items = arrayOf(
-            activity.getString(if (enabled) R.string.overlay_menu_hide else R.string.overlay_menu_show),
-            activity.getString(R.string.overlay_menu_edit),
-            activity.getString(R.string.overlay_menu_exit),
-            activity.getString(R.string.overlay_menu_close),
-        )
+        val hdr = hdrComparison(false)
+        val items = buildList {
+            add(activity.getString(if (enabled) R.string.overlay_menu_hide else R.string.overlay_menu_show))
+            add(activity.getString(R.string.overlay_menu_edit))
+            add(activity.getString(R.string.overlay_menu_exit))
+            if (hdr != 0) add(activity.getString(if (hdr == 1) R.string.overlay_hdr_limit else R.string.overlay_hdr_restore))
+            add(activity.getString(R.string.overlay_menu_close))
+        }.toTypedArray()
         overlay.releaseAll()
         AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(R.string.overlay_menu_title)
@@ -160,6 +177,7 @@ object TouchOverlay {
                     }
                     1 -> setEditing(true)
                     2 -> exitToApp()
+                    3 -> if (hdr != 0) toggleHdrComparison()
                 }
             }
             .show()

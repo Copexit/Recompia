@@ -12,4 +12,8 @@
     <string name="overlay_edit_reset">Reset</string>
     <string name="overlay_edit_done">Done</string>
     <string name="overlay_edit_hint">Drag a control to move it. Tap one, then Smaller or Bigger to resize it.</string>
+    <string name="overlay_hdr_limit">Compare HDR: Limit to paper white</string>
+    <string name="overlay_hdr_restore">Compare HDR: Restore highlights</string>
+    <string name="overlay_hdr_highlights">HDR comparison: Highlights on</string>
+    <string name="overlay_hdr_paper_white">HDR comparison: Paper white only</string>
 </resources>

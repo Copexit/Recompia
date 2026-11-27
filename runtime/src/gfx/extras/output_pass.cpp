@@ -3,6 +3,10 @@
 #include "extras/output_pass.h"
 
 #include <algorithm>
+#if defined(__ANDROID__)
+#include <atomic>
+#include <jni.h>
+#endif
 #include <cmath>
 #include <cstring>
 
@@ -14,6 +18,9 @@
 namespace nxrt::extras {
 namespace {
 constexpr const char* kTag = "outpass";
+#if defined(__ANDROID__)
+std::atomic<bool> g_hdr_paper_white_only{false};
+#endif
 
 #include "extras/extras_shaders.inc"
 
@@ -252,6 +259,21 @@ void OutputPass::encode(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_f
     vkCmdEndRendering(cb);
 }
 
+#if defined(__ANDROID__)
+extern "C" JNIEXPORT jint JNICALL Java_org_recompia_pkp_overlay_TouchOverlay_hdrComparison(JNIEnv*, jobject, jboolean toggle) {
+    const HdrState hdr = hdr_state();
+    if (!hdr.scene_hdr || hdr.output == OutputKind::Sdr8) return 0;
+    bool limited = g_hdr_paper_white_only.load(std::memory_order_relaxed);
+    // The Android UI thread is the sole writer.
+    if (toggle) {
+        limited = !limited;
+        g_hdr_paper_white_only.store(limited, std::memory_order_relaxed);
+        NXLOG_I(kTag, "HDR comparison: %s", limited ? "paper white only" : "HDR highlights");
+    }
+    return limited ? 2 : 1;
+}
+#endif
+
 int OutputPass::record(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_format, VkExtent2D dst_extent, const OutputParams& p) {
     if (!dev_ || !dst_extent.width || !dst_extent.height || !p.src_extent.width || !p.src_extent.height) return -1;
     int mode = 0;
@@ -261,6 +283,10 @@ int OutputPass::record(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_fo
         case OutputKind::ScRgb: mode = 3; break;
     }
 
+    float peak = p.peak_nits;
+#if defined(__ANDROID__)
+    if (p.out != OutputKind::Sdr8 && g_hdr_paper_white_only.load(std::memory_order_relaxed)) peak = p.paper_white_nits;
+#endif
     const float* pic = p.picture ? p.pic : nullptr;
     const float* cm = p.color_matrix ? p.cm : nullptr;
 
@@ -289,11 +315,11 @@ int OutputPass::record(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_fo
         // display-referred picture: the HDR window texture is 1.0 = paper white, so no pre-scale; SDR bytes are already [0,1]
         if (VkImageView up = su ? su->upscale(cb, p.src, in_view, p.src_extent, out, p.src_linear, 1.0f, p.sharpness) : VK_NULL_HANDLE) {
             const int32_t whole[4] = {0, 0, 0, 0};
-            encode(cb, dst_view, dst_format, dst_extent, up, VkExtent2D{upw, uph}, whole, p.keep_aspect, p.flip_y, mode, p.paper_white_nits, p.peak_nits, VK_IMAGE_LAYOUT_GENERAL, pic, cm);
+            encode(cb, dst_view, dst_format, dst_extent, up, VkExtent2D{upw, uph}, whole, p.keep_aspect, p.flip_y, mode, p.paper_white_nits, peak, VK_IMAGE_LAYOUT_GENERAL, pic, cm);
             return mode;
         }
     }
-    encode(cb, dst_view, dst_format, dst_extent, p.src, p.src_extent, p.crop, p.keep_aspect, p.flip_y, mode, p.paper_white_nits, p.peak_nits, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, pic, cm);
+    encode(cb, dst_view, dst_format, dst_extent, p.src, p.src_extent, p.crop, p.keep_aspect, p.flip_y, mode, p.paper_white_nits, peak, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, pic, cm);
     return mode;
 }
 

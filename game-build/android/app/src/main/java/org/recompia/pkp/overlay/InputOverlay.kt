@@ -56,6 +56,8 @@ class InputOverlay(context: Context, private val sink: OverlayInputSink) : View(
         }
 
     var onMenu: (() -> Unit)? = null
+    var onMenuHold: (() -> Boolean)? = null
+    private var menuPressedAt = 0L
 
     private val cameraDrag = CameraDrag(sink, { resources.displayMetrics.density }) {
         overlayJoysticks.any { it.joystick == OverlayStick.RIGHT && it.trackId != -1 }
@@ -217,9 +219,13 @@ class InputOverlay(context: Context, private val sink: OverlayInputSink) : View(
     private fun handleMenu(menu: InputOverlayDrawableButton, event: MotionEvent): Boolean {
         val wasTracked = menu.trackId
         if (!menu.updateStatus(event)) return false
+        if (wasTracked == -1 && menu.trackId != -1) menuPressedAt = event.eventTime
         if (menu.trackId == -1 && wasTracked != -1) {
             val i = event.actionIndex
-            if (menu.bounds.contains(event.getX(i).toInt(), event.getY(i).toInt())) onMenu?.invoke()
+            if (menu.bounds.contains(event.getX(i).toInt(), event.getY(i).toInt())) {
+                val held = event.eventTime - menuPressedAt >= android.view.ViewConfiguration.getLongPressTimeout()
+                if (!held || onMenuHold?.invoke() != true) onMenu?.invoke()
+            }
         }
         invalidate()
         return true
