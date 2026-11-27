@@ -338,7 +338,7 @@ const Row kPicture[] = {
             },
             [](S& s, int v) { s.extras.hdr.peak_nits = v <= 0 ? 0 : std::min(150 + v * 50, extras::hdr_peak_limit_nits()); })),
          extras::hdr_controls_available),
-    when(live_row(autonum("Paper White", "The brightness of white in HDR.", 43, "%.0f nits", 70, 10,
+    when(live_row(autonum("Paper White", "The brightness of ordinary white in HDR. Auto is about 142 nits on Android.", 43, "%.0f nits", 70, 10,
             [](const S& s) { return s.extras.hdr.paper_white_nits <= 0 ? 0 : std::clamp(static_cast<int>(std::lround((s.extras.hdr.paper_white_nits - 70) / 10.0)), 1, 43); },
             [](S& s, int v) { s.extras.hdr.paper_white_nits = v <= 0 ? 0 : 70 + v * 10; })), extras::hdr_controls_available),
     when(restart_row(number("Highlight Boost", "How far highlights reach toward peak brightness.", 0, 40, "%.2f", 0, 0.05,
