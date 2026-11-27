@@ -25,7 +25,9 @@ constexpr const char* kTag = "outpass";
 #if defined(__ANDROID__)
 std::atomic<bool> g_hdr_paper_white_only{false};
 constexpr int kCalibrationNits[] = {203, 300, 450, 600, 1000};
-std::atomic<int> g_hdr_calibration_step{-1};
+constexpr int kScenePeakNits[] = {203, 300, 450, 600, 1000, 1500, 2000, 3000};
+// Positive steps show the calibration patch. Negative steps cap the scene, without changing paper white.
+std::atomic<int> g_hdr_comparison_step{0};
 #endif
 
 #include "extras/extras_shaders.inc"
@@ -254,13 +256,13 @@ void OutputPass::encode(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_f
     ri.colorAttachmentCount = 1;
     ri.pColorAttachments = &att;
 #if defined(__ANDROID__)
-    const int step = g_hdr_calibration_step.load(std::memory_order_relaxed);
-    if (mode >= 2 && step >= 0) {
+    const int step = g_hdr_comparison_step.load(std::memory_order_relaxed);
+    if (mode >= 2 && step > 0) {
         const auto encode_nits = [mode](float nits) { return mode == 2 ? pq_oetf(nits) : nits / 80.0f; };
         const float background = encode_nits(20.0f);
         att.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         att.clearValue.color = {{background, background, background, 1.0f}};
-        const float level = encode_nits(static_cast<float>(kCalibrationNits[step]));
+        const float level = encode_nits(static_cast<float>(kCalibrationNits[step - 1]));
         VkClearAttachment patch{};
         patch.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         patch.clearValue.color = {{level, level, level, 1.0f}};
@@ -298,17 +300,21 @@ extern "C" JNIEXPORT jint JNICALL Java_org_recompia_pkp_overlay_TouchOverlay_hdr
         env->ReleaseStringUTFChars(capture_path, path);
         return requested ? 1 : 0;
     }
-    int step = g_hdr_calibration_step.load(std::memory_order_relaxed);
-    if (action == 2) {
-        step = step < 0 ? 0 : -1;
-        g_hdr_calibration_step.store(step, std::memory_order_relaxed);
-    } else if (action == 1 && step >= 0) {
-        step = (step + 1) % static_cast<int>(std::size(kCalibrationNits));
-        g_hdr_calibration_step.store(step, std::memory_order_relaxed);
+    int step = g_hdr_comparison_step.load(std::memory_order_relaxed);
+    if (action == 2) step = step > 0 ? 0 : 1;
+    else if (action == 3) step = step < 0 ? 0 : -1;
+    else if (action == 1 && step > 0) step = 1 + step % static_cast<int>(std::size(kCalibrationNits));
+    else if (action == 1 && step < 0) step = -1 + step % static_cast<int>(std::size(kScenePeakNits));
+    if (action != 0) g_hdr_comparison_step.store(step, std::memory_order_relaxed);
+    if (step > 0) {
+        const int nits = kCalibrationNits[step - 1];
+        if (action != 0) NXLOG_I(kTag, "HDR calibration: %d nits", nits);
+        return nits;
     }
-    if (step >= 0) {
-        if (action != 0) NXLOG_I(kTag, "HDR calibration: %d nits", kCalibrationNits[step]);
-        return kCalibrationNits[step];
+    if (step < 0) {
+        const int nits = kScenePeakNits[-step - 1];
+        if (action != 0) NXLOG_I(kTag, "HDR scene comparison: %d-nit ceiling", nits);
+        return -nits;
     }
     bool limited = g_hdr_paper_white_only.load(std::memory_order_relaxed);
     if (action == 1) {
@@ -331,7 +337,11 @@ int OutputPass::record(VkCommandBuffer cb, VkImageView dst_view, VkFormat dst_fo
 
     float peak = p.peak_nits;
 #if defined(__ANDROID__)
-    if (p.out != OutputKind::Sdr8 && g_hdr_paper_white_only.load(std::memory_order_relaxed)) peak = p.paper_white_nits;
+    if (p.out != OutputKind::Sdr8) {
+        const int step = g_hdr_comparison_step.load(std::memory_order_relaxed);
+        if (step < 0) peak = static_cast<float>(kScenePeakNits[-step - 1]);
+        else if (g_hdr_paper_white_only.load(std::memory_order_relaxed)) peak = p.paper_white_nits;
+    }
 #endif
     const float* pic = p.picture ? p.pic : nullptr;
     const float* cm = p.color_matrix ? p.cm : nullptr;

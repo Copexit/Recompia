@@ -23,4 +23,7 @@
     <string name="overlay_hdr_capture">Capture HDR signal</string>
     <string name="overlay_hdr_capture_requested">HDR capture requested</string>
     <string name="overlay_hdr_capture_failed">HDR capture unavailable</string>
+    <string name="overlay_hdr_scene_nits">Scene HDR ceiling: %1$d nits</string>
+    <string name="overlay_hdr_start_scene_sweep">Compare HDR peaks in scene</string>
+    <string name="overlay_hdr_end_scene_sweep">End HDR scene comparison</string>
 </resources>

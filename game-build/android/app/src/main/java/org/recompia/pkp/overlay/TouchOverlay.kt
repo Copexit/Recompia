@@ -40,13 +40,14 @@ object TouchOverlay {
     @Keep
     private external fun hdrComparison(action: Int, capturePath: String? = null): Int
 
-    private fun toggleHdrComparison(): Boolean {
-        val state = hdrComparison(1)
+    private fun toggleHdrComparison(action: Int = 1): Boolean {
+        val state = hdrComparison(action)
         val label = when (state) {
             0 -> return false
             1 -> activity.getString(R.string.overlay_hdr_highlights)
             2 -> activity.getString(R.string.overlay_hdr_paper_white)
-            else -> activity.getString(R.string.overlay_hdr_nits, state)
+            else -> if (state < 0) activity.getString(R.string.overlay_hdr_scene_nits, -state)
+                    else activity.getString(R.string.overlay_hdr_nits, state)
         }
         Toast.makeText(activity, label, Toast.LENGTH_SHORT).show()
         return true
@@ -65,7 +66,7 @@ object TouchOverlay {
         val container = SDLActivity.getContentView() as ViewGroup
         overlay = InputOverlay(activity, SdlVirtualGamepad).apply {
             onMenu = ::showMenu
-            onMenuHold = ::toggleHdrComparison
+            onMenuHold = { toggleHdrComparison() }
         }
         container.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         editBar = buildEditBar()
@@ -173,6 +174,7 @@ object TouchOverlay {
                 }))
                 add(activity.getString(if (hdr > 2) R.string.overlay_hdr_end_calibration else R.string.overlay_hdr_start_calibration))
                 add(activity.getString(R.string.overlay_hdr_capture))
+                add(activity.getString(if (hdr < 0) R.string.overlay_hdr_end_scene_sweep else R.string.overlay_hdr_start_scene_sweep))
             }
             add(activity.getString(R.string.overlay_menu_close))
         }.toTypedArray()
@@ -197,6 +199,7 @@ object TouchOverlay {
                         val saved = hdrComparison(0, path) != 0
                         Toast.makeText(activity, if (saved) R.string.overlay_hdr_capture_requested else R.string.overlay_hdr_capture_failed, Toast.LENGTH_SHORT).show()
                     }
+                    6 -> if (hdr != 0) toggleHdrComparison(3)
                 }
             }
             .show()
