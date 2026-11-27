@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Android defaults to Auto HDR on compatible displays, targeting twice the reported peak and offering manual targets up to six times that peak. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game. HDR uses bicubic in place of SGSR to preserve highlights. Hold the touch overlay menu button to toggle a paper-white comparison while playing.
+- Android defaults to Auto HDR on compatible displays, targeting twice the reported peak and offering manual targets up to 4000 nits. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game. SGSR preserves HDR highlights while sharpening the picture. Hold the touch overlay menu button to toggle a paper-white comparison while playing.
 
 ## 0.18.0 (build V: Vaquita)
 

@@ -125,7 +125,6 @@ void SgsrSpatial::shutdown() {
 
 VkImageView SgsrSpatial::upscale(VkCommandBuffer cb, VkImageView src, VkExtent2D in_view, VkExtent2D in_tex, VkExtent2D out, bool linear_hdr, float prescale,
                                 float sharpness, VkExtent2D out_tex) {
-    (void)linear_hdr;
     (void)prescale;
     (void)sharpness;   // SGSR sharpens by its own constant (EdgeSharpness 2); Catmull-Rom has none
     if (!dev_ || !src || !in_view.width || !in_view.height || !out.width || !out.height) return VK_NULL_HANDLE;
@@ -138,7 +137,7 @@ VkImageView SgsrSpatial::upscale(VkCommandBuffer cb, VkImageView src, VkExtent2D
                             // the centre stays 2 texels inside the part: SGSR's gathers and Catmull-Rom reach 2 texels past it, and outside the
                             // part a scene of larger targets holds stale pixels (the game's dynamic resolution)
                             std::max(0.5f, static_cast<float>(in_view.width) - 2.0f) / static_cast<float>(in_tex.width),
-                            std::max(0.5f, static_cast<float>(in_view.height) - 2.0f) / static_cast<float>(in_tex.height), 0.0f, 0.0f};
+                            std::max(0.5f, static_cast<float>(in_view.height) - 2.0f) / static_cast<float>(in_tex.height), linear_hdr ? 1.0f : 0.0f, 0.0f};
     if (!img_ || extent_.width != res.width || extent_.height != res.height) {
         if (img_) {
             dev_->wait_idle();
@@ -204,7 +203,7 @@ VkImageView SgsrSpatial::upscale(VkCommandBuffer cb, VkImageView src, VkExtent2D
 std::atomic<int> g_row_up{-1};
 void set_scene_upscale_live(int kind) { g_row_up.store(kind, std::memory_order_relaxed); }
 
-static const char* requested_scene_upscale_name() {
+const char* scene_upscale_name() {
     if (const int w = scene_upscale_watch(); w >= 0) return w == 1 ? "sgsr" : w == 2 ? "bicubic" : "";   // developer key, live
     if (const int r = g_row_up.load(std::memory_order_relaxed); r >= 0) return r == 1 ? "sgsr" : r == 2 ? "bicubic" : "";
     static const std::string v = [] {
@@ -215,11 +214,6 @@ static const char* requested_scene_upscale_name() {
     return v.c_str();
 }
 
-const char* scene_upscale_name() {
-    const char* name = requested_scene_upscale_name();
-    // SGSR clips edge-filtered samples to [0, 1]. Bicubic preserves HDR highlights above paper white.
-    return hdr_scene_active() && std::strcmp(name, "sgsr") == 0 ? "bicubic" : name;
-}
 
 SgsrSpatial* scene_cheap_upscaler(void* gfx_device) {
     static SgsrSpatial* up[2] = {};   // one per kind, made on first use (a live switch back costs nothing)

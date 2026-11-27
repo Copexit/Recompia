@@ -293,8 +293,7 @@ int hdr_auto_peak_nits() {
 
 int hdr_peak_limit_nits() {
 #if defined(__ANDROID__)
-    const int reported = hdr_reported_peak_nits();
-    return std::min((reported > 0 ? reported : 1000) * 6, 10000);
+    return 4000;
 #else
     return 10000;
 #endif
@@ -384,7 +383,7 @@ void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_pe
 #if defined(__ANDROID__)
     if (display_hdr) {
         if (s.peak_nits <= 0) pk = static_cast<float>(hdr_auto_peak_nits());
-        pk = std::min(pk, static_cast<float>(hdr_peak_limit_nits()));
+        else pk = std::min(pk, static_cast<float>(hdr_peak_limit_nits()));
         pw = std::min(pw, pk);
     }
 #endif

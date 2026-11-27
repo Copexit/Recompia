@@ -497,7 +497,7 @@ void scene_stretch_for_draw(const ProgLayout& pl) {
             // its input at uv x fraction, so handing it the result needed an image of out / fraction (at 15 %: an RGBA16F image 6.7 times the screen per side, 1.4 GB,
             // made when the Resolution was lowered: a phone was killed for memory); this needs one of the target's size.
             if (cheap && (part.width < se.width || part.height < se.height)) {
-                VkImageView up = cheap->upscale(F->cb, src, part, VkExtent2D{se.width, se.height}, out, false, 1.0f, 0.0f, out);
+                VkImageView up = cheap->upscale(F->cb, src, part, VkExtent2D{se.width, se.height}, out, extras::hdr_scene_active(), 1.0f, 0.0f, out);
                 shadow_invalidate();
                 memory_barrier(F->cb);
                 if (up && tex_blit_from(target, *F, cheap->image(), VK_FORMAT_R16G16B16A16_SFLOAT, out)) {
@@ -556,7 +556,7 @@ void scene_sharpen_for_draw(const ProgLayout& pl) {
             VkImageView src = tex_sampled_view(r.tex, make_request(b, r));
             if (!src) return;
             const VkExtent2D in{se.width, se.height}, out{te.width, te.height};
-            VkImageView v = cheap->upscale(F->cb, src, in, in, out, false, 1.0f, 0.0f);
+            VkImageView v = cheap->upscale(F->cb, src, in, in, out, extras::hdr_scene_active(), 1.0f, 0.0f);
             shadow_invalidate();
             if (!v) return;
             g_su.tex = r.tex;

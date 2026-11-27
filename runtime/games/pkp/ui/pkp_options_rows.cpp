@@ -265,7 +265,7 @@ const Row kPerformance[] = {
     when(number("Sharpness", "How much FSR 1, FSR 3 or SGSR 2 sharpens the picture.", 0, 20, "%.2f", 0, 0.05, ROW_STEP(extras.upscale.sharpness, 0.0, 0.05)), not_phone),
     // a phone's Upscaler and its Sharpness sit here too, at the same place as the desktop's (the Display tab keeps Resolution)
     when(with_choices(choice("Upscaler", "Sharpens the enlarged 3D picture. SGSR is recommended: cheaper and steadier. SGSR 2 builds more detail over several "
-                "frames. When HDR is active, selecting SGSR uses bicubic scaling to preserve highlights.", {"Off", "SGSR", "SGSR 2"}, 3, phone_upscaler_get, phone_upscaler_set),
+                "frames, but costs more and can shimmer slightly while moving.", {"Off", "SGSR", "SGSR 2"}, 3, phone_upscaler_get, phone_upscaler_set),
                      phone_upscaler_choices), nxrt::host_is_phone),
     when(live_row(number("Sharpness", "How much SGSR 2 sharpens its picture; SGSR does not use it. Higher is crisper, and fine detail can shimmer more.", 0,
                          20, "%.2f", 0, 0.05, ROW_STEP(extras.upscale.sharpness, 0.0, 0.05))), nxrt::host_is_phone),
