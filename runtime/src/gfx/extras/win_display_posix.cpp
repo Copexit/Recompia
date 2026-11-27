@@ -23,6 +23,7 @@
 
 #if !defined(_WIN32)
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +74,26 @@ bool query_display_hdr(void* hwnd, DisplayHdrInfo* out) {
 #else
     (void)hwnd;
     constexpr float kReferenceWhiteNits = 203.0f;   // ITU-R BT.2408: reference white of ST 2084 content
+#if defined(__ANDROID__)
+    const char* hdr = getenv("NXRT_ANDROID_DISPLAY_HDR");
+    out->valid = true;
+    out->hdr_enabled = hdr && strcmp(hdr, "1") == 0;
+    snprintf(out->monitor, sizeof out->monitor, "of the activity");
+    snprintf(out->how, sizeof out->how, "Android display capabilities");
+    if (out->hdr_enabled) {
+        const auto read_nits = [](const char* key) {
+            const char* value = getenv(key);
+            if (!value) return 0.0f;
+            char* end = nullptr;
+            const float nits = strtof(value, &end);
+            return end != value && *end == '\0' && isfinite(nits) && nits > 0.0f ? nits : 0.0f;
+        };
+        out->max_nits = read_nits("NXRT_ANDROID_DISPLAY_MAX_NITS");
+        out->min_nits = read_nits("NXRT_ANDROID_DISPLAY_MIN_NITS");
+        out->sdr_white_nits = kReferenceWhiteNits;
+    }
+    return true;
+#else
     if (const char* gs = getenv("GAMESCOPE_WAYLAND_DISPLAY"); gs && *gs) {
         out->valid = true;
         out->formats_tell = true;
@@ -95,6 +116,7 @@ bool query_display_hdr(void* hwnd, DisplayHdrInfo* out) {
     }
     snprintf(out->how, sizeof out->how, "window system: headroom %.2f", static_cast<double>(wh.headroom));
     return true;
+#endif
 #endif
 }
 

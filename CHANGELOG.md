@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Android automatically uses HDR on compatible displays and uses the display’s reported peak brightness.
+
 ## 0.18.0 (build V: Vaquita)
 
 **Update:** press **Update** in the launcher, then **Set up again** once (the game code is lifted again and there are new hook sites; saves and shaders are kept, no shader is rebuilt). On Android, the app updates from inside it. Everyone in a co-op session needs this version: an older build cannot join a newer one.
