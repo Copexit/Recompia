@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <mutex>
 
 #include "nxrt/config.h"
@@ -265,21 +266,33 @@ void hdr_set_state(const HdrState& s) {
     g_seq.store(a + 2, std::memory_order_release);
 }
 
-void hdr_refresh_levels() {
+bool hdr_controls_available() {
+#if defined(__ANDROID__)
+    const char* hdr = std::getenv("NXRT_ANDROID_DISPLAY_HDR");
+    return hdr && hdr[0] == '1' && hdr[1] == '\0';
+#else
+    return true;
+#endif
+}
+
+void hdr_preview_levels(const HdrSettings& hdr) {
     HdrState hs = hdr_state();
     if (!hs.scene_hdr) return;
-    const Settings es = settings();
-    hdr_resolve_levels(es.hdr, hs.display_hdr, hs.display_peak_nits, hs.display_sdr_white_nits, &hs.paper_white_nits, &hs.peak_nits);
-    if (es.hdr.mode == HdrMode::Native && es.hdr.paper_white_nits <= 0 && hs.game_standard_nits >= 80.0f) {
+    const float old_paper = hs.paper_white_nits, old_peak = hs.peak_nits;
+    hdr_resolve_levels(hdr, hs.display_hdr, hs.display_peak_nits, hs.display_sdr_white_nits, &hs.paper_white_nits, &hs.peak_nits);
+    if (hs.mode == HdrMode::Native && hdr.paper_white_nits <= 0 && hs.game_standard_nits >= 80.0f) {
         // the game's SDR-graded range is what a Switch 2 shows at the TV's paper white; [hdr] paper_white_nits, when set, still wins
         hs.paper_white_nits = std::clamp(hs.game_standard_nits, 80.0f, 500.0f);
         hs.peak_nits = std::max(hs.peak_nits, hs.paper_white_nits);
     }
-    hs.peak_ratio = hs.output == OutputKind::Sdr8 ? 1.0f : peak_ratio(hs.peak_nits, hs.paper_white_nits, static_cast<float>(es.hdr.highlight_boost));
+    hs.peak_ratio = hs.output == OutputKind::Sdr8 ? 1.0f : peak_ratio(hs.peak_nits, hs.paper_white_nits, static_cast<float>(hdr.highlight_boost));
+    if (hs.paper_white_nits != old_paper || hs.peak_nits != old_peak) ++hs.metadata_serial;
     hdr_set_state(hs);
 }
 
-bool hdr_mode_native() { return settings().hdr.mode == HdrMode::Native; }
+void hdr_refresh_levels() { hdr_preview_levels(settings().hdr); }
+
+bool hdr_mode_native() { return hdr_state().mode == HdrMode::Native; }
 
 namespace {
 std::mutex g_note_mu;

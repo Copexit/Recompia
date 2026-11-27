@@ -152,6 +152,7 @@ enum class OutputKind : uint8_t { Sdr8 = 0, Hdr10, ScRgb };
 const char* output_kind_name(OutputKind k);
 
 struct HdrState {
+    HdrMode mode = HdrMode::Off;      // mode selected when the renderer was created
     bool scene_hdr = false;          // the game runs the HDR scene pipeline: float window / post targets, patched tone-map shader and curve
     OutputKind output = OutputKind::Sdr8;   // what the swapchain carries
     float paper_white_nits = 203;
@@ -176,6 +177,8 @@ inline bool hdr_scene_active() { return hdr_state().scene_hdr; }
 // Recomputes paper white, peak and the peak ratio from settings() and the display numbers kept in the state (after a live settings change).
 // The swapchain's output kind and scene_hdr never change here (they are decided when the renderer is created).
 void hdr_refresh_levels();
+void hdr_preview_levels(const HdrSettings& settings);
+bool hdr_controls_available();
 
 // The game's declarations (HdrMode::Native). Thread-safe; each call refreshes the levels and the swapchain metadata, and logs the native decision once.
 void hdr_note_layer_luminance(bool extended, unsigned min_nits, unsigned max_nits);

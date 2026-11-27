@@ -31,6 +31,7 @@ import org.recompia.pkp.Paths
 import org.recompia.pkp.R
 import org.recompia.pkp.overlay.OverlayPrefs
 import java.util.concurrent.Executors
+import kotlin.math.roundToInt
 
 private val writer = Executors.newSingleThreadExecutor()
 
@@ -76,13 +77,38 @@ private fun GroupCard(g: SettingsModel.Group, values: Map<String, String>, set: 
                         if (r.note != 0 && values[r.id] == "1") Text(stringResource(r.note), style = MaterialTheme.typography.bodySmall, color = Rc.text3, modifier = indent.padding(horizontal = 12.dp))
                     }
                     is SettingsModel.Choice -> {
-                        ChoiceRow(if (r.label != 0) stringResource(r.label) else r.text,
-                            choiceOptions(r, values[r.id] ?: r.def), values[r.id] ?: r.def, { set(r, it) }, indent)
+                        val label = if (r.label != 0) stringResource(r.label) else r.text
+                        val selected = values[r.id] ?: r.def
+                        if (r.slider) {
+                            ChoiceSlider(label, r, selected, values.isNotEmpty(), { set(r, it) }, indent)
+                        } else {
+                            ChoiceRow(label, choiceOptions(r, selected), selected, { set(r, it) }, indent)
+                        }
                         if (r.note != 0) Text(stringResource(r.note), style = MaterialTheme.typography.bodySmall, color = Rc.text3, modifier = indent.padding(horizontal = 12.dp))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ChoiceSlider(label: String, row: SettingsModel.Choice, selected: String, enabled: Boolean,
+                         onSelect: (String) -> Unit, modifier: Modifier) {
+    val initial = row.options.indexOfFirst { it.value == selected }.takeIf { it >= 0 }
+        ?: row.options.indices.minBy { index ->
+            kotlin.math.abs(row.options[index].value.toDouble() - (selected.toDoubleOrNull() ?: 0.0))
+        }
+    var index by remember(selected) { mutableIntStateOf(initial) }
+    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Text("$label: ${optionText(row.options[index])}", style = MaterialTheme.typography.titleMedium, color = Rc.text)
+        Slider(
+            index.toFloat(), { index = it.roundToInt() }, valueRange = 0f..row.options.lastIndex.toFloat(),
+            steps = row.options.size - 2, enabled = enabled,
+            onValueChangeFinished = { onSelect(row.options[index].value) },
+            colors = SliderDefaults.colors(thumbColor = Rc.accent, activeTrackColor = Rc.accent, inactiveTrackColor = Rc.surface3),
+            modifier = Modifier.fillMaxWidth().focusRing().semantics { contentDescription = label },
+        )
     }
 }
 

@@ -1,11 +1,9 @@
 package org.recompia.pkp
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Process
 import android.util.Log
-import android.view.Display
 import android.view.WindowManager
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -36,18 +34,10 @@ class GameActivity : SDLActivity() {
         val env = linkedMapOf<String, String>()
         // Vulkan's swapchain dataspace tells Android how to composite the surface.
         // Pass the activity display's capabilities before SDL starts the renderer.
-        display?.let { activeDisplay ->
-            val hdr = activeDisplay.hdrCapabilities ?: return@let
-            @Suppress("DEPRECATION")
-            val hdrTypes = if (Build.VERSION.SDK_INT >= 34) activeDisplay.mode.supportedHdrTypes else hdr.supportedHdrTypes
-            val supportsHdrOutput = hdrTypes.any {
-                it == Display.HdrCapabilities.HDR_TYPE_HDR10 || it == Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS
-            }
-            if (supportsHdrOutput) {
-                env["NXRT_ANDROID_DISPLAY_HDR"] = "1"
-                env["NXRT_ANDROID_DISPLAY_MAX_NITS"] = hdr.desiredMaxLuminance.toString()
-                env["NXRT_ANDROID_DISPLAY_MIN_NITS"] = hdr.desiredMinLuminance.toString()
-            }
+        hdrDisplayCapabilities(display)?.let { hdr ->
+            env["NXRT_ANDROID_DISPLAY_HDR"] = "1"
+            env["NXRT_ANDROID_DISPLAY_MAX_NITS"] = hdr.desiredMaxLuminance.toString()
+            env["NXRT_ANDROID_DISPLAY_MIN_NITS"] = hdr.desiredMinLuminance.toString()
         }
         // the file-backed heap ([memory] section_dir) must never fill the storage: below the free space it needs, this start uses the
         // zram heap instead and says so

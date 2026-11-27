@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Android automatically uses HDR on compatible displays and uses the display’s reported peak brightness.
+- Android automatically uses HDR on compatible displays. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game.
 
 ## 0.18.0 (build V: Vaquita)
 

@@ -52,12 +52,13 @@ bool auto_nits_slider(const char* label, double* v, int lo, int hi) {
 }
 
 void hdr_group(Page& p) {
+    if (!extras::hdr_controls_available()) return;
     extras::HdrSettings& h = p.edit.extras.hdr;
     ImGui::SeparatorText("HDR output");
 
     const int mode = static_cast<int>(h.mode);
     const bool mode_open = ImGui::BeginCombo("Mode##hdr_mode", kHdrModeNames[mode]);
-    tip("Off keeps the SDR picture, Auto uses HDR when the display and Windows offer it, On runs the HDR pipeline even without an HDR display. "
+    tip("Off keeps the SDR picture, Auto uses HDR when the display and platform support it, On runs the HDR pipeline even without an HDR display. "
         "Native is On with the levels the game declares for an HDR TV on Switch 2.");
     if (mode_open) {
         for (int i = 0; i < 4; ++i) {
