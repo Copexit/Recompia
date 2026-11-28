@@ -2,9 +2,17 @@
 
 ## Unreleased
 
+## 0.18.1 (build V: Vaquita Hotfix a1)
+
+**Update:** press **Update** in the launcher, then **Set up again** once (new hook sites; saves and shaders are kept, no shader is rebuilt). On Android, the app updates from inside it. Everyone in a co-op session needs this version: an older build cannot join a newer one.
+
+### Highlights
+- Co-op story fixes: story escorts follow you, followers travel with the group, a teammate's building start and story talks are kept, and stand-shop trades work for every player
+- Co-op travel polls count no answer as yes
+- Add-on content shows again after the game files were moved
+
 ### Android
 - Added the PC launcher's Sunrise and Meadow looks to the phone app: Automatic (the default) picks Sunrise, Meadow or Dusk by the time of day, or choose one in Settings > Look > Colours
-- Android defaults to Auto HDR on compatible displays, targeting twice the reported peak and offering manual targets up to 4000 nits. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game. SGSR preserves HDR highlights while sharpening the picture.
 
 ### Changed
 - Changed the frame rate limit to 60 fps by default on every PC and handheld, the rate the game runs at on the console: many bugs only show above 60. Players on the old default (Match Display) move to 60 once; a limit you picked yourself stays. To play above 60, pick Match Display, a higher rate or Unlimited in Settings > Display > Frame Rate Limit
@@ -20,6 +28,8 @@
 - Fixed the log's pool copy figures counting pages a GPU write left unchanged as copied after a landing
 - Fixed a crash on the first boot on some Windows PCs that reported `HOST EXCEPTION 0x406D1388`: that code only names a thread for a debugger and is now ignored
 - Fixed a co-op member's start of a town building kit being lost: the start now counts like the host's own and is kept in the host's save
+- Fixed creatures the story asks to follow you in co-op following nobody, so story requests that need you to lead them somewhere could not be finished
+- Fixed a creature following you in co-op being sent home when you change areas, even when it was allowed to come along: it now arrives with you
 
 ## 0.18.0 (build V: Vaquita)
 
