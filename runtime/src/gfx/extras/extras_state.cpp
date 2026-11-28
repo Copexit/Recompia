@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <mutex>
 
 #include "nxrt/config.h"
@@ -270,21 +271,53 @@ void hdr_set_state(const HdrState& s) {
     g_seq.store(a + 2, std::memory_order_release);
 }
 
-void hdr_refresh_levels() {
+bool hdr_controls_available() {
+#if defined(__ANDROID__)
+    const char* hdr = std::getenv("NXRT_ANDROID_DISPLAY_HDR");
+    return hdr && hdr[0] == '1' && hdr[1] == '\0';
+#else
+    return true;
+#endif
+}
+
+int hdr_reported_peak_nits() {
+#if defined(__ANDROID__)
+    const char* value = std::getenv("NXRT_ANDROID_DISPLAY_MAX_NITS");
+    char* end = nullptr;
+    const long nits = value ? std::strtol(value, &end, 10) : 0;
+    return end && *end == '\0' && nits >= 200 && nits <= 10000 ? static_cast<int>(nits) : 0;
+#else
+    return 0;
+#endif
+}
+
+int hdr_auto_peak_nits() {
+    const int reported = hdr_reported_peak_nits();
+    return std::min((reported > 0 ? reported : 1000) * 2, 10000);
+}
+
+int hdr_peak_limit_nits() {
+#if defined(__ANDROID__)
+    return 4000;
+#else
+    return 10000;
+#endif
+}
+
+void hdr_preview_levels(const HdrSettings& hdr) {
     HdrState hs = hdr_state();
     if (!hs.scene_hdr) return;
-    const Settings es = settings();
-    hdr_resolve_levels(es.hdr, hs.display_hdr, hs.display_peak_nits, hs.display_sdr_white_nits, &hs.paper_white_nits, &hs.peak_nits);
-    if (es.hdr.mode == HdrMode::Native && es.hdr.paper_white_nits <= 0 && hs.game_standard_nits >= 80.0f) {
-        // the game's SDR-graded range is what a Switch 2 shows at the TV's paper white; [hdr] paper_white_nits, when set, still wins
-        hs.paper_white_nits = std::clamp(hs.game_standard_nits, 80.0f, 500.0f);
-        hs.peak_nits = std::max(hs.peak_nits, hs.paper_white_nits);
-    }
-    hs.peak_ratio = hs.output == OutputKind::Sdr8 ? 1.0f : peak_ratio(hs.peak_nits, hs.paper_white_nits, static_cast<float>(es.hdr.highlight_boost));
+    const float old_paper = hs.paper_white_nits, old_peak = hs.peak_nits;
+    hdr_resolve_levels(hdr, hs.display_hdr, hs.display_peak_nits, hs.display_sdr_white_nits, &hs.paper_white_nits, &hs.peak_nits,
+                       hs.mode == HdrMode::Native ? hs.game_standard_nits : 0.0f);
+    hs.peak_ratio = hs.output == OutputKind::Sdr8 ? 1.0f : peak_ratio(hs.peak_nits, hs.paper_white_nits, static_cast<float>(hdr.highlight_boost));
+    if (hs.paper_white_nits != old_paper || hs.peak_nits != old_peak) ++hs.metadata_serial;
     hdr_set_state(hs);
 }
 
-bool hdr_mode_native() { return settings().hdr.mode == HdrMode::Native; }
+void hdr_refresh_levels() { hdr_preview_levels(settings().hdr); }
+
+bool hdr_mode_native() { return hdr_state().mode == HdrMode::Native; }
 
 namespace {
 std::mutex g_note_mu;
@@ -344,11 +377,21 @@ void hdr_note_window_hdr(int color_space, const float* display, const float* con
     after_note();
 }
 
-void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_peak_nits, float display_sdr_white_nits, float* paper, float* peak) {
+void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_peak_nits, float display_sdr_white_nits, float* paper, float* peak, float native_standard_nits) {
     float pw = static_cast<float>(s.paper_white_nits);
-    if (pw <= 0) pw = display_hdr && display_sdr_white_nits >= 80.0f ? std::clamp(display_sdr_white_nits, 80.0f, 500.0f) : 203.0f;
+    if (pw <= 0) {
+        const float white = native_standard_nits >= 80.0f ? native_standard_nits : display_hdr ? display_sdr_white_nits : 0.0f;
+        pw = white >= 80.0f ? std::clamp(white, 80.0f, 500.0f) : 203.0f;
+    }
     float pk = static_cast<float>(s.peak_nits);
     if (pk <= 0) pk = display_peak_nits >= 200.0f ? std::min(display_peak_nits, 10000.0f) : 1000.0f;
+#if defined(__ANDROID__)
+    if (display_hdr) {
+        if (s.peak_nits <= 0) pk = static_cast<float>(hdr_auto_peak_nits());
+        else pk = std::min(pk, static_cast<float>(hdr_peak_limit_nits()));
+        pw = std::min(pw, pk);
+    }
+#endif
     pk = std::max(pk, pw);
     if (paper) *paper = pw;
     if (peak) *peak = pk;

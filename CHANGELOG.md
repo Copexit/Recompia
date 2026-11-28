@@ -4,6 +4,7 @@
 
 ### Android
 - Added the PC launcher's Sunrise and Meadow looks to the phone app: Automatic (the default) picks Sunrise, Meadow or Dusk by the time of day, or choose one in Settings > Look > Colours
+- Android defaults to Auto HDR on compatible displays, targeting twice the reported peak and offering manual targets up to 4000 nits. Adjust HDR in the launcher or in-game picture settings, with live brightness previews in-game. SGSR preserves HDR highlights while sharpening the picture.
 
 ### Changed
 - Changed the frame rate limit to 60 fps by default on every PC and handheld, the rate the game runs at on the console: many bugs only show above 60. Players on the old default (Match Display) move to 60 once; a limit you picked yourself stays. To play above 60, pick Match Display, a higher rate or Unlimited in Settings > Display > Frame Rate Limit
