@@ -21,6 +21,7 @@
 #include "nxrt/host_device.h"
 #include "nxrt/input.h"
 #include "nxrt/platform.h"
+#include "nxrt/platform_facts.h"
 #include "play_game.h"
 
 namespace nxrt::games::pkp::options_detail {
@@ -316,16 +317,15 @@ const Row kGraphics[] = {
 const Row kPicture[] = {
     when(choice("HDR", "High dynamic range output on a display that supports it.", {"Off", "Auto", "On", "Native"}, 4, ROW_ENUM(extras.hdr.mode, extras::HdrMode), true), extras::hdr_controls_available),
     when(choice("HDR Format", "The HDR signal sent to the display.", {"Auto", "HDR10", "scRGB"}, 3, ROW_ENUM(extras.hdr.format, extras::HdrFormat), true), extras::hdr_controls_available),
-    when(live_row(dynamic("Peak Brightness", "On Android, Auto targets twice the reported display peak. Manual can request a higher HDR signal. Restart to rebuild the highlight curve.",
+    when(live_row(dynamic("Peak Brightness", "Auto uses the platform HDR calibration. Manual sets the HDR signal ceiling. Restart to rebuild the highlight curve.",
             [](int pos, char* out, size_t n) -> const char* {
                 if (pos == 0) {
-#if defined(__ANDROID__)
-                    const int reported = extras::hdr_reported_peak_nits();
-                    std::snprintf(out, n, reported > 0 ? "Auto (%d nits)" : "Auto (%d nits fallback)", extras::hdr_auto_peak_nits());
-                    return out;
-#else
+                    if constexpr (facts::kOnAndroid) {
+                        const int reported = extras::hdr_reported_peak_nits();
+                        std::snprintf(out, n, reported > 0 ? "Auto (%d nits)" : "Auto (%d nits fallback)", extras::hdr_auto_peak_nits(reported));
+                        return out;
+                    }
                     return "Auto";
-#endif
                 }
                 std::snprintf(out, n, "%d nits", std::min(150 + pos * 50, extras::hdr_peak_limit_nits()));
                 return out;

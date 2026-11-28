@@ -6,15 +6,16 @@
 #include <atomic>
 #include <cctype>
 #include <cstdio>
-#include <cstdlib>
 #include <mutex>
 
 #include "nxrt/config.h"
 #include "nxrt/host_device.h"
 #include "nxrt/log.h"
+#include "nxrt/platform_facts.h"
 #include "nxrt/text.h"
 #include "extras/hdr_math.h"
 #include "extras/temporal.h"
+#include "extras/win_display.h"
 
 namespace nxrt::extras {
 namespace {
@@ -272,37 +273,26 @@ void hdr_set_state(const HdrState& s) {
 }
 
 bool hdr_controls_available() {
-#if defined(__ANDROID__)
-    const char* hdr = std::getenv("NXRT_ANDROID_DISPLAY_HDR");
-    return hdr && hdr[0] == '1' && hdr[1] == '\0';
-#else
+    if constexpr (facts::kOnAndroid) {
+        DisplayHdrInfo display{};
+        return query_display_hdr(nullptr, &display) && display.hdr_enabled;
+    }
     return true;
-#endif
 }
 
 int hdr_reported_peak_nits() {
-#if defined(__ANDROID__)
-    const char* value = std::getenv("NXRT_ANDROID_DISPLAY_MAX_NITS");
-    char* end = nullptr;
-    const long nits = value ? std::strtol(value, &end, 10) : 0;
-    return end && *end == '\0' && nits >= 200 && nits <= 10000 ? static_cast<int>(nits) : 0;
-#else
+    if constexpr (facts::kOnAndroid) {
+        DisplayHdrInfo display{};
+        if (query_display_hdr(nullptr, &display)) return static_cast<int>(display.max_nits);
+    }
     return 0;
-#endif
 }
 
-int hdr_auto_peak_nits() {
-    const int reported = hdr_reported_peak_nits();
-    return std::min((reported > 0 ? reported : 1000) * 2, 10000);
+int hdr_auto_peak_nits(float reported) {
+    return static_cast<int>(std::min((reported >= 200.0f ? reported : 1000.0f) * 2.0f, static_cast<float>(hdr_peak_limit_nits())));
 }
 
-int hdr_peak_limit_nits() {
-#if defined(__ANDROID__)
-    return 4000;
-#else
-    return 10000;
-#endif
-}
+int hdr_peak_limit_nits() { return facts::kOnAndroid ? 4000 : 10000; }
 
 void hdr_preview_levels(const HdrSettings& hdr) {
     HdrState hs = hdr_state();
@@ -385,13 +375,13 @@ void hdr_resolve_levels(const HdrSettings& s, bool display_hdr, float display_pe
     }
     float pk = static_cast<float>(s.peak_nits);
     if (pk <= 0) pk = display_peak_nits >= 200.0f ? std::min(display_peak_nits, 10000.0f) : 1000.0f;
-#if defined(__ANDROID__)
-    if (display_hdr) {
-        if (s.peak_nits <= 0) pk = static_cast<float>(hdr_auto_peak_nits());
-        else pk = std::min(pk, static_cast<float>(hdr_peak_limit_nits()));
-        pw = std::min(pw, pk);
+    if constexpr (facts::kOnAndroid) {
+        if (display_hdr) {
+            pk = s.peak_nits <= 0 ? static_cast<float>(hdr_auto_peak_nits(display_peak_nits))
+                                  : std::min(pk, static_cast<float>(hdr_peak_limit_nits()));
+            pw = std::min(pw, pk);
+        }
     }
-#endif
     pk = std::max(pk, pw);
     if (paper) *paper = pw;
     if (peak) *peak = pk;

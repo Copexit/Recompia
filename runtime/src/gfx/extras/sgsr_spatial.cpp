@@ -214,7 +214,6 @@ const char* scene_upscale_name() {
     return v.c_str();
 }
 
-
 SgsrSpatial* scene_cheap_upscaler(void* gfx_device) {
     static SgsrSpatial* up[2] = {};   // one per kind, made on first use (a live switch back costs nothing)
     static bool tried[2] = {};

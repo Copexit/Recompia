@@ -114,10 +114,12 @@ object SettingsModel {
         val hdr = hdrDisplayCapabilities(ctx.display)?.let { caps ->
             val reportedPeak = reportedHdrPeak(caps)
             val peak = reportedPeak ?: 1000
+            // Mirrors hdr_auto_peak_nits and hdr_peak_limit_nits in the runtime.
+            val peakLimit = 4000
             val autoPeak = ctx.getString(
-                if (reportedPeak != null) R.string.ui_set_hdr_auto_peak else R.string.ui_set_hdr_fallback_peak, (peak * 2).coerceAtMost(10000)
+                if (reportedPeak != null) R.string.ui_set_hdr_auto_peak else R.string.ui_set_hdr_fallback_peak, (peak * 2).coerceAtMost(peakLimit)
             )
-            val peaks = 200..4000 step 50
+            val peaks = 200..peakLimit step 50
             listOf(Group(R.string.ui_set_hdr, listOf(
                 Choice("hdr_mode", c, "hdr", "mode", R.string.ui_set_hdr_mode, "auto", listOf(
                     Option("off", R.string.ui_off), Option("auto", R.string.ui_set_automatic),

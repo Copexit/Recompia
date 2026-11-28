@@ -26,6 +26,7 @@
 #include "nxrt/text.h"
 #include "extras/gpu_keepalive.h"
 #include "extras/hdr_capture.h"
+#include "nxrt/platform_facts.h"
 #include "extras/hdr_math.h"
 #include "extras/win_display.h"
 #include "vk_gauges.h"
@@ -399,16 +400,16 @@ struct Renderer::Impl {
         md.displayPrimaryGreen = {0.170f, 0.797f};
         md.displayPrimaryBlue = {0.131f, 0.046f};
         md.whitePoint = {0.3127f, 0.3290f};
-#if !defined(__ANDROID__)
         md.maxLuminance = hs.peak_nits;
-        md.minLuminance = 0.0f;
         md.maxContentLightLevel = hs.peak_nits;
-        md.maxFrameAverageLightLevel = std::max(hs.paper_white_nits, hs.peak_nits * 0.25f);
-#endif
-        // Android's selected peak is an encode ceiling. Mastering and frame-average levels are unknown.
+        if constexpr (!facts::kOnAndroid) {
+            md.maxFrameAverageLightLevel = std::max(hs.paper_white_nits, hs.peak_nits * 0.25f);
+        }
         if (native) {
-            const float cll = hs.game_max_cll > 0 ? hs.game_max_cll : hs.game_extended_nits;
-            if (cll > 0) md.maxContentLightLevel = std::min(std::max(cll, hs.paper_white_nits), hs.peak_nits);
+            if constexpr (!facts::kOnAndroid) {
+                const float cll = hs.game_max_cll > 0 ? hs.game_max_cll : hs.game_extended_nits;
+                if (cll > 0) md.maxContentLightLevel = std::min(std::max(cll, hs.paper_white_nits), hs.peak_nits);
+            }
             if (hs.game_max_fall > 0) md.maxFrameAverageLightLevel = std::min(hs.game_max_fall, md.maxContentLightLevel);
             else md.maxFrameAverageLightLevel = std::min(md.maxFrameAverageLightLevel, md.maxContentLightLevel);
         }

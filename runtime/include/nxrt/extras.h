@@ -183,7 +183,7 @@ void hdr_refresh_levels();
 void hdr_preview_levels(const HdrSettings& settings);
 bool hdr_controls_available();
 int hdr_reported_peak_nits();
-int hdr_auto_peak_nits();
+int hdr_auto_peak_nits(float reported);
 int hdr_peak_limit_nits();
 
 // The game's declarations (HdrMode::Native). Thread-safe; each call refreshes the levels and the swapchain metadata, and logs the native decision once.

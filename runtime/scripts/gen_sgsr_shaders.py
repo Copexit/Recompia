@@ -54,7 +54,7 @@ void main() {
 }
 """
     note = ("// Snapdragon Game Super Resolution 1, mobile, edge direction: Copyright (c) 2025, Qualcomm Innovation Center, Inc.\n"
-            "// SPDX-License-Identifier: BSD-3-Clause (third_party/qualcomm_sgsr/LICENSE); wrapped into a compute shader.\n")
+            "// SPDX-License-Identifier: BSD-3-Clause (third_party/qualcomm_sgsr/LICENSE); adapted to compute and HDR at generation time.\n")
     return HEAD + note + "vec4 vp_info[1];\n" + defs + body.replace("vec4 sgsr_pixel(vec4 in_TEXCOORD0)\n{", "vec4 sgsr_pixel(vec4 in_TEXCOORD0)\n{\n\tvp_info[0] = pc.vp;") + main
 
 
